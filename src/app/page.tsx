@@ -1,14 +1,17 @@
 "use client";
 
 import {
+  AnimatePresence,
   animate,
   motion,
   useInView,
   useMotionValue,
+  useReducedMotion,
+  useScroll,
   useSpring,
   useTransform,
 } from "framer-motion";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 const navItems = [
   "About",
@@ -194,62 +197,213 @@ function Counter({
   );
 }
 
+const diagramLayers = [
+  {
+    name: "Input Layer",
+    teaser: "Controlled entry points for signals and intent.",
+    detail:
+      "Every touchpoint—UI, API, webhooks, imports—lands in a normalized boundary so noise never floods the core. Validation, rate shaping, and schema checks happen here before work enters the stack.",
+    signals: ["Event contracts", "Auth context", "Idempotency keys"],
+  },
+  {
+    name: "Logic Layer",
+    teaser: "Decisions, rules, and orchestration in one coherent plane.",
+    detail:
+      "This is where business rules, workflows, and cross-cutting policies live as explicit modules—not buried in controllers. It coordinates what runs, in what order, and under which constraints.",
+    signals: ["Policy graph", "Workflow engine", "State machines"],
+  },
+  {
+    name: "System Layer",
+    teaser: "Execution, integrations, and resilient infrastructure.",
+    detail:
+      "Services talk to databases, queues, and third parties through adapters you can swap or scale independently. Retries, circuit breaks, and observability hooks are first-class so operations stay predictable.",
+    signals: ["Service mesh", "Queues & workers", "Data adapters"],
+  },
+  {
+    name: "Insight Layer",
+    teaser: "Telemetry and feedback that close the loop.",
+    detail:
+      "Structured metrics, traces, and product analytics roll up into dashboards and alerts. The system learns from production behavior and feeds the next design iteration without guesswork.",
+    signals: ["SLIs & SLOs", "Experiment hooks", "Anomaly routing"],
+  },
+];
+
 function LayerDiagram() {
-  const layers = [
-    { name: "Input Layer", desc: "Signals, requests, and user events enter through controlled interfaces." },
-    { name: "Logic Layer", desc: "Rules, decisions, and orchestration transform complexity into flow." },
-    { name: "System Layer", desc: "Services and integrations execute operations in resilient modules." },
-    { name: "Insight Layer", desc: "Metrics and intelligence provide feedback loops for continuous improvement." },
-  ];
-  const [active, setActive] = useState(1);
+  const [focused, setFocused] = useState(1);
+  const layer = diagramLayers[focused]!;
 
   return (
-    <div className="glass relative rounded-3xl p-8">
-      <svg className="pointer-events-none absolute inset-0 h-full w-full" viewBox="0 0 500 340" fill="none">
-        {[0, 1, 2].map((i) => (
-          <motion.path
-            key={i}
-            initial={{ pathLength: 0, opacity: 0 }}
-            whileInView={{ pathLength: 1, opacity: 0.8 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.68, delay: i * 0.12, ease: [0.4, 0, 0.2, 1] }}
-            d={`M90 ${80 + i * 62} C 180 ${100 + i * 62}, 250 ${85 + i * 62}, 340 ${105 + i * 62}`}
-            stroke="rgba(30, 227, 207, 0.75)"
-            strokeWidth="1.6"
-            strokeLinecap="round"
-            strokeDasharray="4 8"
-          />
-        ))}
-      </svg>
-      <div className="relative space-y-4">
-        {layers.map((layer, i) => (
-          <motion.button
-            type="button"
-            key={layer.name}
-            initial={{ opacity: 0, y: 18 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.58, delay: i * 0.08, ease: [0.4, 0, 0.2, 1] }}
-            onMouseEnter={() => setActive(i)}
-            className={`interactive-zone block w-full rounded-xl border p-4 text-left transition ${
-              active === i
-                ? "border-accent/40 bg-accent/10 shadow-glow"
-                : "border-white/10 bg-white/5 hover:border-white/30"
-            }`}
-            style={{ transform: `translateX(${i * 12}px)` }}
+    <div className="glass relative overflow-hidden rounded-3xl p-6 sm:p-8 lg:grid lg:grid-cols-[1fr_minmax(260px,320px)] lg:gap-8 lg:items-start">
+      <div className="relative min-h-[280px] lg:min-h-[340px]">
+        <svg className="pointer-events-none absolute inset-0 h-full w-full" viewBox="0 0 500 340" fill="none" aria-hidden>
+          {diagramLayers.map((_, i) => (
+            <motion.path
+              key={i}
+              initial={{ pathLength: 0 }}
+              whileInView={{ pathLength: 1 }}
+              viewport={{ once: true }}
+              animate={{
+                opacity: focused === i ? 0.95 : i < focused ? 0.48 : 0.22,
+                stroke: focused === i ? "rgba(30, 227, 207, 0.92)" : "rgba(30, 227, 207, 0.32)",
+                strokeWidth: focused === i ? 2 : 1.4,
+              }}
+              transition={{
+                pathLength: { duration: 0.62, delay: i * 0.1, ease: [0.4, 0, 0.2, 1] },
+                opacity: { duration: 0.38, ease: [0.4, 0, 0.2, 1] },
+                stroke: { duration: 0.38, ease: [0.4, 0, 0.2, 1] },
+                strokeWidth: { duration: 0.38, ease: [0.4, 0, 0.2, 1] },
+              }}
+              d={`M90 ${72 + i * 62} C 180 ${92 + i * 62}, 250 ${77 + i * 62}, 340 ${97 + i * 62}`}
+              strokeLinecap="round"
+              strokeDasharray="4 8"
+            />
+          ))}
+        </svg>
+        <div className="relative space-y-3 pt-2">
+          {diagramLayers.map((item, i) => (
+            <motion.button
+              type="button"
+              key={item.name}
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.52, delay: i * 0.07, ease: [0.4, 0, 0.2, 1] }}
+              onClick={() => setFocused(i)}
+              aria-pressed={focused === i}
+              className={`interactive-zone block w-full rounded-xl border px-4 py-3 text-left transition duration-300 ${
+                focused === i
+                  ? "border-accent/50 bg-accent/15 shadow-glow"
+                  : "border-white/10 bg-white/[0.04] hover:border-white/25"
+              }`}
+              style={{ transform: `translateX(${i * 10}px)` }}
+            >
+              <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Layer {i + 1}</p>
+              <p className="text-base font-medium text-white">{item.name}</p>
+              <p className="mt-1 line-clamp-2 text-sm text-slate-400">{item.teaser}</p>
+            </motion.button>
+          ))}
+        </div>
+      </div>
+
+      <div className="relative mt-8 min-h-[200px] lg:mt-0 lg:min-h-[300px]">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={focused}
+            role="region"
+            aria-label={`${layer.name} details`}
+            initial={{ opacity: 0, x: 16, filter: "blur(6px)" }}
+            animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
+            exit={{ opacity: 0, x: -12, filter: "blur(4px)" }}
+            transition={{ duration: 0.42, ease: [0.4, 0, 0.2, 1] }}
+            className="rounded-2xl border border-white/10 bg-white/[0.06] p-5 backdrop-blur-sm lg:sticky lg:top-28"
           >
-            <p className="text-sm text-slate-400">Layer {i + 1}</p>
-            <p className="text-lg font-medium text-white">{layer.name}</p>
-            <p className="mt-1 text-sm text-slate-300">{layer.desc}</p>
-          </motion.button>
-        ))}
+            <p className="text-xs font-medium uppercase tracking-[0.2em] text-accent">Focus</p>
+            <h3 className="mt-2 text-xl font-semibold text-white">{layer.name}</h3>
+            <p className="mt-3 text-sm leading-relaxed text-slate-300">{layer.detail}</p>
+            <ul className="mt-4 space-y-2 border-t border-white/10 pt-4">
+              {layer.signals.map((s) => (
+                <li key={s} className="flex items-center gap-2 text-sm text-slate-400">
+                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent/80" />
+                  {s}
+                </li>
+              ))}
+            </ul>
+          </motion.div>
+        </AnimatePresence>
       </div>
     </div>
   );
 }
 
+function MagneticButton({
+  href,
+  className,
+  children,
+}: {
+  href: string;
+  className?: string;
+  children: ReactNode;
+}) {
+  const ref = useRef<HTMLAnchorElement>(null);
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+  const springX = useSpring(x, { stiffness: 320, damping: 22, mass: 0.4 });
+  const springY = useSpring(y, { stiffness: 320, damping: 22, mass: 0.4 });
+
+  const onMove = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    const el = ref.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const cx = r.left + r.width / 2;
+    const cy = r.top + r.height / 2;
+    x.set((e.clientX - cx) * 0.22);
+    y.set((e.clientY - cy) * 0.22);
+  };
+  const onLeave = () => {
+    x.set(0);
+    y.set(0);
+  };
+
+  return (
+    <motion.a
+      ref={ref}
+      href={href}
+      onMouseMove={onMove}
+      onMouseLeave={onLeave}
+      className={`interactive-zone inline-flex ${className ?? ""}`}
+    >
+      <motion.span style={{ x: springX, y: springY }} className="inline-flex items-center justify-center">
+        {children}
+      </motion.span>
+    </motion.a>
+  );
+}
+
+function ParallaxSection({
+  id,
+  className,
+  children,
+  depth = 1,
+}: {
+  id?: string;
+  className?: string;
+  children: ReactNode;
+  depth?: number;
+}) {
+  const ref = useRef<HTMLElement>(null);
+  const reduceMotion = useReducedMotion();
+  const { scrollYProgress } = useScroll({
+    target: ref,
+    offset: ["start end", "end start"],
+  });
+  const y = useTransform(
+    scrollYProgress,
+    [0, 1],
+    reduceMotion ? [0, 0] : [depth * 10, -depth * 10],
+  );
+
+  return (
+    <motion.section ref={ref} id={id} style={{ y }} className={className}>
+      {children}
+    </motion.section>
+  );
+}
+
 export default function Home() {
   const [cursor, setCursor] = useState({ x: -100, y: -100, active: false });
+  const reduceMotion = useReducedMotion();
+  const { scrollYProgress } = useScroll();
+  const syncGridY = useTransform(
+    scrollYProgress,
+    [0, 0.5, 1],
+    reduceMotion ? [0, 0, 0] : [0, -10, -18],
+  );
+  const syncGlowY = useTransform(
+    scrollYProgress,
+    [0, 0.5, 1],
+    reduceMotion ? [0, 0, 0] : [0, 14, 24],
+  );
+  const syncDriftX = useTransform(scrollYProgress, [0, 1], reduceMotion ? [0, 0] : [0, 10]);
 
   useEffect(() => {
     const move = (event: MouseEvent) =>
@@ -272,15 +426,25 @@ export default function Home() {
   return (
     <main className="relative overflow-hidden">
       <motion.div
-        animate={{ y: [0, -10, 0], x: [0, 6, 0] }}
-        transition={{ duration: 12, repeat: Infinity, ease: [0.4, 0, 0.2, 1] }}
-        className="pointer-events-none absolute inset-0 grid-overlay opacity-[0.18]"
-      />
+        style={{ y: syncGridY }}
+        className="pointer-events-none absolute inset-0 will-change-transform"
+      >
+        <motion.div
+          animate={{ y: [0, -10, 0], x: [0, 6, 0] }}
+          transition={{ duration: 12, repeat: Infinity, ease: [0.4, 0, 0.2, 1] }}
+          className="absolute inset-0 grid-overlay opacity-[0.18]"
+        />
+      </motion.div>
       <motion.div
-        animate={{ opacity: [0.08, 0.14, 0.08] }}
-        transition={{ duration: 8, repeat: Infinity, ease: [0.4, 0, 0.2, 1] }}
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(30,227,207,0.12),transparent_40%),radial-gradient(circle_at_80%_55%,rgba(139,124,255,0.1),transparent_45%)]"
-      />
+        style={{ y: syncGlowY, x: syncDriftX }}
+        className="pointer-events-none absolute inset-0 will-change-transform"
+      >
+        <motion.div
+          animate={{ opacity: [0.08, 0.14, 0.08] }}
+          transition={{ duration: 8, repeat: Infinity, ease: [0.4, 0, 0.2, 1] }}
+          className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(30,227,207,0.12),transparent_40%),radial-gradient(circle_at_80%_55%,rgba(139,124,255,0.1),transparent_45%)]"
+        />
+      </motion.div>
       <motion.div
         className={`pointer-events-none fixed left-0 top-0 z-[70] hidden h-8 w-8 rounded-full md:block ${
           cursor.active ? "bg-accent/20" : "bg-white/10"
@@ -310,16 +474,16 @@ export default function Home() {
               </li>
             ))}
           </ul>
-          <a
+          <MagneticButton
             href="#cta"
-            className="interactive-zone rounded-full border border-accent/40 bg-accent/10 px-4 py-2 text-sm font-medium text-accent transition hover:shadow-glow"
+            className="rounded-full border border-accent/40 bg-accent/10 px-4 py-2 text-sm font-medium text-accent transition hover:shadow-glow"
           >
             Start a Build
-          </a>
+          </MagneticButton>
         </nav>
       </header>
 
-      <section id="hero" className="relative mx-auto max-w-7xl px-6 pb-20 pt-24 lg:pt-28">
+      <ParallaxSection id="hero" depth={1.05} className="relative mx-auto max-w-7xl px-6 pb-20 pt-24 lg:pt-28">
         <motion.div
           initial={{ opacity: 0, y: 28 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -350,12 +514,18 @@ export default function Home() {
               Logic Layer designs and ships modern software systems where every component connects with clarity, depth, and precision.
             </p>
             <div className="mt-10 flex flex-wrap gap-4">
-              <a href="#services" className="interactive-zone shine-btn rounded-full bg-accent px-7 py-3 font-medium text-bg transition hover:-translate-y-0.5 hover:shadow-glow">
+              <MagneticButton
+                href="#services"
+                className="shine-btn rounded-full bg-accent px-7 py-3 font-medium text-bg transition hover:-translate-y-0.5 hover:shadow-glow"
+              >
                 Explore Services
-              </a>
-              <a href="#process" className="interactive-zone rounded-full border border-white/20 px-7 py-3 font-medium text-white transition hover:border-white/40">
+              </MagneticButton>
+              <MagneticButton
+                href="#process"
+                className="rounded-full border border-white/20 px-7 py-3 font-medium text-white transition hover:border-white/40"
+              >
                 View Process
-              </a>
+              </MagneticButton>
             </div>
           </div>
 
@@ -379,9 +549,9 @@ export default function Home() {
             ))}
           </motion.div>
         </motion.div>
-      </section>
+      </ParallaxSection>
 
-      <section id="about" className="mx-auto max-w-7xl px-6 py-20">
+      <ParallaxSection id="about" depth={-0.75} className="mx-auto max-w-7xl px-6 py-20">
         <motion.div
           initial={{ opacity: 0, y: 28 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -400,9 +570,9 @@ export default function Home() {
           </div>
           <LayerDiagram />
         </motion.div>
-      </section>
+      </ParallaxSection>
 
-      <section id="services" className="mx-auto max-w-7xl px-6 py-20">
+      <ParallaxSection id="services" depth={0.9} className="mx-auto max-w-7xl px-6 py-20">
         <motion.div
           initial={{ opacity: 0, y: 28 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -430,9 +600,9 @@ export default function Home() {
             ))}
           </div>
         </motion.div>
-      </section>
+      </ParallaxSection>
 
-      <section id="process" className="mx-auto max-w-7xl px-6 py-20">
+      <ParallaxSection id="process" depth={-0.55} className="mx-auto max-w-7xl px-6 py-20">
         <motion.div
           initial={{ opacity: 0, y: 28 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -457,9 +627,9 @@ export default function Home() {
             ))}
           </div>
         </motion.div>
-      </section>
+      </ParallaxSection>
 
-      <section id="solutions" className="mx-auto max-w-7xl px-6 py-20">
+      <ParallaxSection id="solutions" depth={0.65} className="mx-auto max-w-7xl px-6 py-20">
         <motion.div
           initial={{ opacity: 0, y: 28 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -476,9 +646,9 @@ export default function Home() {
             <p className="mt-3 text-xl text-white">Core + Integration + Intelligence</p>
           </div>
         </motion.div>
-      </section>
+      </ParallaxSection>
 
-      <section id="impact" className="mx-auto max-w-7xl px-6 py-20">
+      <ParallaxSection id="impact" depth={-0.85} className="mx-auto max-w-7xl px-6 py-20">
         <motion.div
           initial={{ opacity: 0, y: 28 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -492,9 +662,9 @@ export default function Home() {
             ))}
           </div>
         </motion.div>
-      </section>
+      </ParallaxSection>
 
-      <section id="trust" className="mx-auto max-w-7xl px-6 py-20">
+      <ParallaxSection id="trust" depth={0.5} className="mx-auto max-w-7xl px-6 py-20">
         <motion.div
           initial={{ opacity: 0, y: 28 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -512,9 +682,9 @@ export default function Home() {
             ))}
           </div>
         </motion.div>
-      </section>
+      </ParallaxSection>
 
-      <section id="cta" className="mx-auto max-w-7xl px-6 pb-16 pt-8">
+      <ParallaxSection id="cta" depth={-0.45} className="mx-auto max-w-7xl px-6 pb-16 pt-8">
         <motion.div
           initial={{ opacity: 0, y: 28 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -526,12 +696,15 @@ export default function Home() {
           <div className="relative">
             <h2 className="text-3xl font-semibold text-white sm:text-4xl">Engineer your next layer of growth</h2>
             <p className="mx-auto mt-4 max-w-2xl text-slate-300">Partner with Logic Layer to design systems that are elegant today and resilient tomorrow.</p>
-            <a href="#hero" className="interactive-zone shine-btn mt-8 inline-block rounded-full bg-accent px-8 py-3 font-medium text-bg transition hover:shadow-glow">
+            <MagneticButton
+              href="#hero"
+              className="shine-btn mt-8 rounded-full bg-accent px-8 py-3 font-medium text-bg transition hover:shadow-glow"
+            >
               Book Discovery Session
-            </a>
+            </MagneticButton>
           </div>
         </motion.div>
-      </section>
+      </ParallaxSection>
 
       <footer className="border-t border-white/10 py-8">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-6 px-6 text-sm text-slate-400">
